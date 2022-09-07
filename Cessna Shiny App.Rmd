@@ -1,0 +1,122 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+#```{r}
+#plot(cars)
+#```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
+```{r}
+# This loads the shiny and readxl add on
+library(shiny)
+library(tidyverse)
+library(readxl)
+
+#This sets the working directory to this location
+setwd('C:/Users/jonfr/Desktop/Coding/R')
+
+#Read and assigns data to variaible CPD, makes it a tibble
+CPD <- read_excel("Cessna Performance Data.xlsx") %>% as_tibble()
+
+#Creates a vector of unqiue Pressue Altitudes
+uPA <- unique(CPD$PA)
+udelT <- unique(CPD$deltaT)
+
+# Define UI for app that draws a histogram ----
+ui <- fluidPage(
+
+  # App title ----
+  titlePanel("Cessna Performance Data"),
+
+  # Sidebar layout with input and output definitions ----
+  sidebarLayout(
+
+    # Sidebar panel for inputs ----
+    sidebarPanel(
+
+      # Input: Slider for the Pressure Altitude ----
+      sliderInput(inputId = "PA",
+                  label = "Pressure Altitude",
+                  min = min(uPA),
+                  max = max(uPA),
+                  value = min(uPA),
+                  #this should set the step size to interval size. 
+                  # make this throw an error in functional version
+                  step = unique(diff(uPA))
+      ),
+      
+      # Input: Slider for the Temperature ----
+      sliderInput(inputId = "delT",
+                  label = "Temperature from Standard",
+                  min = min(udelT),
+                  max = max(udelT),
+                  value = median(udelT),
+                  #this should set the step size to interval size. 
+                  # make this throw an error in functional version
+                  step = unique(diff(udelT))
+      ),
+      
+      # Input: Slider for another input ----
+      sliderInput(inputId = "drag",
+                  label = "Drag Index",
+                  min = 0,
+                  max = 200,
+                  value = 0
+      )
+    ),
+
+    # Main panel for displaying outputs ----
+    mainPanel(
+
+      # Output: Histogram ----
+      plotOutput(outputId = "examplePlot")
+
+    )
+  )
+)
+
+# Define server logic required to draw a histogram ----
+server <- function(input, output) {
+
+
+  # This expression that generates a histogram is wrapped in a call
+  # to renderPlot to indicate that:
+  #
+  # 1. It is "reactive" and therefore should be automaticallyrunExample("03_reactivity")
+  #    re-executed when inputs (input$bins) change
+  # 2. Its output type is a plot
+  output$examplePlot <- renderPlot({
+
+    
+    #this assigns only the inputs provided by the sliders above to
+    #the variable x
+    x <- filter(CPD,CPD$PA == input$PA & CPD$deltaT == input$delT)
+    
+    #this takes the data now assigned to x, and plots it using ggplot2
+    explot <- ggplot(x,aes(x$KTAS, x$GPH)) + geom_line(color = "blue")
+    #this assigns a common x/y scale to the graph, based on the data, that wont change
+    explot <- explot + scale_x_continuous(limits = c(min(CPD$KTAS)-1,max(CPD$KTAS)+1))
+    explot <- explot + scale_y_continuous(limits = c(0,ceiling(max(CPD$GPH))))
+    #this labels the graph
+    explot <- explot + labs(x = "KTAS", y = "Gallons Per Hour", title = "Fuel Flow")
+    print(explot)
+
+
+    })
+
+}
+
+# Create Shiny app ----
+shinyApp(ui = ui, server = server)
+```
